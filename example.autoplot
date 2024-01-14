@@ -1,0 +1,52 @@
+{
+    "namespace": "test",
+    "uuid": "6d07887c-ab41-4763-af8f-899cb684c2df",
+
+    "file_version": 1,
+
+    "pplot_version": "0.0.1",
+
+    "imports": [ "numpy" ],
+
+    "loaders": {
+        "l0": "testlib.load_dat"
+    },
+
+    "disk_data": {
+        "d0": {
+            "filepath": "testdata.dat",
+            "loader": "l0"
+        },
+        "d1": {
+            "filepath": "testdata.hdf5"
+        }
+    },
+
+    "processed_data": [ "v0" ],
+
+    "functions": {
+        "f0": {
+            "target": "testlib.process_data",
+            "inputs": [ "d0" ],
+            "output": "v0"
+        },
+        "f1": {
+            "target": ".print",
+            "inputs": [ "v0" ]
+        }
+    },
+
+    "plots": {
+        "p0": {}
+    },
+
+    "required_externals": [
+        "~/imports.autoplot"
+    ],
+
+    "target_externals": [
+        "./niche_set_1.autoplot",
+        "./niche_set_2.autoplot",
+        "./niche_set_3.autoplot"
+    ]
+}

@@ -313,10 +313,10 @@ class HDF5_DataDependency(DataDependency_Base):
     Data to be loaded from an hdf5 file on disk.
     """
 
-    def __init__(self: "DataDependency", name: str, filepath: str, expected_data_paths: List[str] = []):
+    def __init__(self: "DataDependency", name: str, filepath: str, expected_data_paths: List[str] = None):
         super().__init__(name)
         self.__filepath: str = filepath
-        self.__expected_data_paths: List[str] = expected_data_paths
+        self.__expected_data_paths: List[str] = expected_data_paths if expected_data_paths is not None else []
     
     def _load(self: "Dependency", *args, **kwargs) -> None:
         """

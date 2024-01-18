@@ -17,6 +17,8 @@ import unyt
 import numpy as np
 import h5py
 
+import builtins
+
 
 
 class DependencyNotLoadedError(RuntimeError):
@@ -25,7 +27,7 @@ class DependencyNotLoadedError(RuntimeError):
     """
 
     def __init__(self, dependency: "Dependency"):
-        super().__init__(message = f"Dependancy {dependency.Name} could not be successfully loaded.\n\nError Details:\n\n{dependency._error_details}")
+        super().__init__(f"Dependancy {dependency.Name} either not yet loaded or could not be successfully loaded.\n\nError Details:\n\n{dependency._error_details}")
 
 
 
@@ -35,7 +37,7 @@ class DependencyCorruptError(RuntimeError):
     """
 
     def __init__(self, dependency: "Dependency"):
-        super().__init__(message = f"Dependancy {dependency.Name} is deleted, corrupt or has been mutated in some braking way.\n\nError Details:\n\n{dependency._error_details}")
+        super().__init__(f"Dependancy {dependency.Name} is deleted, corrupt or has been mutated in some braking way.\n\nError Details:\n\n{dependency._error_details}")
 
 
 
@@ -66,6 +68,14 @@ class Dependency(ABC):
         """
 
         return self.__loaded
+
+    @property
+    def IsValid(self: "Dependency") -> bool:
+        """
+        Has the dependancy been successfully loaded?
+        """
+
+        return self.__valid
 
     @property
     def Name(self: "Dependency") -> str:
@@ -106,16 +116,18 @@ class Dependency(ABC):
         try:
             self.__value = self._load(*args, **kwargs)
             self.__loaded = True
+            self.__valid = True
         except Exception as e:
             self.__loaded = False
-            self.__error_details = str(e.with_traceback())
+            self.__valid = False
+            self.__error_details = str(e.with_traceback(None))
 
         try:
             self._validate(*args, **kwargs)
             self.__valid = True
         except Exception as e:
             self.__valid = False
-            self.__error_details = str(e.with_traceback())
+            self.__error_details = str(e.with_traceback(None))
 
         return self.__loaded and self.__valid
 
@@ -183,17 +195,20 @@ class CallableDependency(Dependency):
         self.__target: Union[Callable, None] = None
 
         if not self.__is_direct:
-            if namespace_root is None:
+            if target[0] != "." and namespace_root is None:
                 raise ValueError("No argument provided for paramiter \"namespace_root\" but target was a string. String targets require the root namespace from which they are imported.")
             
-            self.__target_namespace = namespace_root
-            self.__target_path_in_namespace = target.split(".")
+            self.__target_namespace = namespace_root if namespace_root is not None else ""
+            self.__target_path_in_namespace = target.lstrip(".").split(".")
 
         else:
             if not callable(target):
                 raise TypeError("Invalid argument datatype provided for paramiter \"target\". Must be a string or callable.")
             
             self.__target = target
+
+    def load(self: "Dependency", loaded_module_dependancies: Dict[str, object] = None, *args, **kwargs) -> bool:
+        return super().load(loaded_module_dependancies if loaded_module_dependancies is not None else {}, *args, **kwargs)
     
     def _load(self: "Dependency", loaded_module_dependancies: Dict[str, object], *args, **kwargs) -> None:
         """
@@ -201,7 +216,10 @@ class CallableDependency(Dependency):
         """
         
         if not self.__is_direct:
-            target = loaded_module_dependancies[self.__target_namespace] if self.__target_namespace != "" else globals()
+            try:
+                target = loaded_module_dependancies[self.__target_namespace] if self.__target_namespace != "" else builtins
+            except ValueError as e:
+                raise ValueError(f"Callable dependance {self.Name} is either an invalid function path or required loading from a module and the module root was not provided.") from e
             for path_element in self.__target_path_in_namespace:
                 target = getattr(target, path_element)
             self.__target = target
@@ -276,7 +294,7 @@ class DataDependency(DataDependency_Base):
         if expected_dims is not None:
             d = 0
             test = self.Value
-            while isinstance(test, collections.abc.Iterable) and not isinstance(test, (str, bytes, unyt.unyt_quantity)) and (isinstance(test, np.ndarray) and test.shape != tuple()):
+            while isinstance(test, collections.abc.Iterable) and not isinstance(test, (str, bytes, unyt.unyt_quantity)) and not (isinstance(test, np.ndarray) and test.shape != tuple()):
                 test = test[0]
                 d += 1
             assert d == expected_dims, f"The loaded data contained an unexpected number of dimensions (was {d} not {expected_dims})."
@@ -292,7 +310,7 @@ class DataDependency(DataDependency_Base):
             else:
                 d = 0
                 test = self.Value
-                while isinstance(test[0], collections.abc.Iterable) and not isinstance(test[0], (str, bytes, unyt.unyt_quantity)) and (isinstance(test, np.ndarray) and test.shape != tuple()):
+                while isinstance(test[0], collections.abc.Iterable) and not isinstance(test[0], (str, bytes, unyt.unyt_quantity)) and not (isinstance(test, np.ndarray) and test.shape != tuple()):
                     assert len(test) == self.__dimension_lengths, f"The loaded data contained an unexpected number of elements in dimension {d}. Length (was {len(test)} not {self.__dimension_lengths})"
                     test = test[0]
                     d += 1

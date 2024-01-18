@@ -6,7 +6,7 @@ from enum import Enum
 import uuid
 import numpy as np
 
-from ..pythonplot import __version__
+from . import __version__
 from .Dependencies import LibraryDependency, CallableDependency, DataDependency_Base, DataDependency, HDF5_DataDependency
 
 class PlotDefinition(object):

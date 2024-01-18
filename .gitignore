@@ -399,3 +399,6 @@ FodyWeavers.xsd
 
 # Development Environment
 environment/
+
+# Builds
+dist/

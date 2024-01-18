@@ -1,0 +1,35 @@
+[version]
+path = "src/pythonplot/__about__.py"
+
+[build.targets.sdist]
+exclude = []
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pythonplot"]
+
+[envs.default]
+dependencies = [
+  "coverage[toml]>=6.5",
+  "pytest",
+]
+[envs.default.scripts]
+test = "pytest {args:tests}"
+test-cov = "coverage run -m pytest {args:tests}"
+cov-report = [
+  "- coverage combine",
+  "coverage report",
+]
+cov = [
+  "test-cov",
+  "cov-report",
+]
+
+[[envs.all.matrix]]
+python = ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+[envs.types]
+dependencies = [
+  "mypy>=1.0.0",
+]
+[envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/pythonplot tests}"

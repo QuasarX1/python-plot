@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pythonplot"
+dynamic = ["version"]
+description = 'Automation of python plotting using matplotlib.'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = []
+authors = [
+  { name = "Christopher Rowe", email = "contact@cjrrowe.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "QuasarCode",
+  "numpy",
+  "matplotlib",
+  "unyt",
+  "h5py"
+]
+
+[project.urls]
+Documentation = "https://github.com/QuasarX1/python-plot#readme"
+Issues = "https://github.com/QuasarX1/python-plot/issues"
+Source = "https://github.com/QuasarX1/python-plot"
+
+
+
+[tool.coverage.run]
+source_pkgs = ["pythonplot", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/pythonplot/__about__.py",
+]
+
+[tool.coverage.paths]
+pythonplot = ["src/pythonplot", "*/python-plot/src/pythonplot"]
+tests = ["tests", "*/python-plot/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]

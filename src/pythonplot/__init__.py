@@ -40,7 +40,7 @@ This Python package defines the following commands:
         Returns the filepath of a log (default latest) for an automation. View with your prefered tool.
 """
 
-__version__ = "0.0.1"
+from . import testscript
 
 from . import Dependencies
 from .Dependencies import LibraryDependency, CallableDependency, DataDependency, HDF5_DataDependency

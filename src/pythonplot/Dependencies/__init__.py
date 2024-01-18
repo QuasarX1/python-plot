@@ -16,6 +16,7 @@ import pickle
 import unyt
 import numpy as np
 import h5py
+import os
 
 import builtins
 
@@ -152,15 +153,29 @@ class LibraryDependency(Dependency):
     Importable code namespace.
     """
 
-    def __init__(self: "LibraryDependency", name: str):
+    def __init__(self: "LibraryDependency", name: str, relitive_import_path: Union[str, None] = None, filepath: Union[str, None] = None):
         super().__init__(name)
+        self.__filepath = filepath
+        self.__relitive_import_path = relitive_import_path
+
+        if self.__filepath is not None and self.__filepath[-3:] != ".py":
+            package_name = self.__filepath.rstrip(os.path.sep).split(os.path.sep, maxsplit = 1)[-1]
+            self.__filepath = os.path.join(self.__filepath, "__init__.py")
+            if self.__relitive_import_path is not None:
+                self.__relitive_import_path = f"{package_name}.{self.__relitive_import_path}"
     
     def _load(self: "Dependency", *args, **kwargs) -> None:
         """
         Load the library. Raises an error if this fails.
         """
         
-        return importlib.import_module(self.Name)
+        if self.__filepath is None:
+            return importlib.import_module(self.Name if self.__relitive_import_path is None else self.__relitive_import_path)
+        else:
+            spec = importlib.util.spec_from_file_location(self.__relitive_import_path if self.__relitive_import_path is not None else self.Name, self.__filepath)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            return module
     
     def _validate(self: "Dependency", *args, **kwargs) -> None:
         """
@@ -257,7 +272,7 @@ class DataDependency(DataDependency_Base):
     Data to be loaded from disk.
     """
 
-    def __init__(self: "DataDependency", name: str, filepath: str, file_loader: Callable[[str], object], datatype: type = object, dimensions: Union[int, None] = None, dimension_lengths: Union[List[Union[int, None]], int, None] = None, phsyical_units: Union[List[Union[str, None]], str, None] = None):
+    def __init__(self: "DataDependency", name: str, filepath: str, file_loader: Union[CallableDependency, Callable[[str], object]], datatype: type = object, dimensions: Union[int, None] = None, dimension_lengths: Union[List[Union[int, None]], int, None] = None, phsyical_units: Union[List[Union[str, None]], str, None] = None):
         super().__init__(name)
         self.__filepath = filepath
         self.__file_loader = file_loader
@@ -271,7 +286,7 @@ class DataDependency(DataDependency_Base):
                 raise ValueError(f"The number of dimensions ({dimensions}) does not match the number of lengths provided for each dimension ({len(dimension_lengths)}). If specifying lengths, use None for dimensions of unknown length.")
             if isinstance(phsyical_units, list) and len(phsyical_units) != dimensions:
                 raise ValueError(f"The number of dimensions ({dimensions}) does not match the number of physical units provided for each dimension ({len(phsyical_units)}). If specifying lengths, use None for dimensions with unknown units.")
-                
+    
         if isinstance(dimension_lengths, list) and isinstance(phsyical_units, list) and len(dimension_lengths) != len(phsyical_units):
             raise ValueError(f"The number of expected dimensions by the arguments for paramiters \"dimension_lengths\" and \"phsyical_units\" are inconsistent ({len(dimension_lengths)} and {len(phsyical_units)} respectivley).")
     
@@ -279,14 +294,16 @@ class DataDependency(DataDependency_Base):
         """
         Load the data. Raises an error if this fails.
         """
-        
-        return self.__file_loader(self.__filepath)
+
+        func = self.__file_loader if not isinstance(self.__file_loader, CallableDependency) else self.__file_loader.Value
+
+        return func(self.__filepath)
     
     def _validate(self: "Dependency", *args, **kwargs) -> None:
         """
         Validate the data is the right datatype and has the correct dimensions (both data and physical where appropriate). Raises an error if this fails.
         """
-        
+
         if self.__datatype is not None:
             assert isinstance(self.Value, self.__datatype), f"The loaded data was of an unexpected datatype (was {type(self.Value)} not {self.__datatype})."
 
@@ -365,7 +382,7 @@ def load_from_pickle(filepath) -> object:
 
     Load data from a pickle file.
     """
-    
+
     data = None
     with open(filepath, "rb") as f:
         data = pickle.load(f)
@@ -377,5 +394,5 @@ def load_from_hdf5(filepath) -> h5py.File:
     """
     Load data from an hdf5 file.
     """
-    
+
     return h5py.File(filepath)

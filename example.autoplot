@@ -6,33 +6,40 @@
 
     "pplot_version": "0.0.1",
 
-    "imports": [ "numpy" ],
+    "imports": {
+        "some_module": {
+            "location": "/path/to/file.py"
+        },
+        "some_subpackage": {
+            "location": "/path/to/module",
+            "importpath": "submodulename"
+        }
+    },
 
-    "loaders": {
-        "l0": "testlib.load_dat"
+    "functions": {
+        "f0": "process_extra_data",
+        "f1": ".print"
     },
 
     "disk_data": {
         "d0": {
             "filepath": "testdata.dat",
-            "loader": "l0"
+            "loader": "imports.custom_binary_reader"
         },
         "d1": {
-            "filepath": "testdata.hdf5"
+            "filepath": "testdata.hdf5",
+            "loader": "HDF5"
         }
     },
 
-    "processed_data": [ "v0" ],
-
-    "functions": {
-        "f0": {
-            "target": "testlib.process_data",
-            "inputs": [ "d0" ],
-            "output": "v0"
+    "processed_data": {
+        "v0": {
+            "function": "testlib.process_data",
+            "inputs": [ "d0" ]
         },
-        "f1": {
-            "target": ".print",
-            "inputs": [ "v0" ]
+        "v1": {
+            "function": "f0",
+            "inputs": [ "d1" ]
         }
     },
 

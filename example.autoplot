@@ -6,6 +6,12 @@
 
     "pplot_version": "0.0.1",
 
+    "logs_path": "./logs",
+
+    "required_externals": [
+        "~/imports.autoplot"
+    ],
+
     "imports": {
         "some_module": {
             "location": "/path/to/file.py"
@@ -17,7 +23,7 @@
     },
 
     "functions": {
-        "f0": "process_extra_data",
+        "f0": "some_subpackage.process_extra_data",
         "f1": ".print"
     },
 
@@ -47,13 +53,9 @@
         "p0": {}
     },
 
-    "required_externals": [
-        "~/imports.autoplot"
-    ],
-
     "target_externals": [
         "./niche_set_1.autoplot",
         "./niche_set_2.autoplot",
         "./niche_set_3.autoplot"
-    ]
+    ],
 }

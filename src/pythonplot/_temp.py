@@ -12,11 +12,21 @@ from .Dependencies import LibraryDependency, CallableDependency, DataDependency_
 class PlotDefinition(object):
     pass
 
+class ExcecutionPlan(object):
+    pass
+
 class Requirement(Enum):
+    """
+    Is a field a required field or is it optional?
+    """
+
     REQUIRED = 0
     OPTIONAL = 1
 
 FIELDS = {
+             "namespace": Requirement.REQUIRED,
+                  "uuid": Requirement.REQUIRED,
+             "logs_path": Requirement.REQUIRED,
           "file_version": Requirement.REQUIRED,
          "pplot_version": Requirement.REQUIRED,
                "imports": Requirement.REQUIRED,
@@ -36,7 +46,7 @@ def load_config(filepath: str) -> "Config":
 
     return Config.from_file(filepath)
 
-class ConfigurationInvalidError(RuntimeError):
+class ConfigurationInvalidError(SyntaxError):
     """
     Configuration was not formatted correctly.
     """
@@ -102,9 +112,17 @@ class Config(qc.IO.Configurations.JsonConfig):
                     except ValueError:
                         raise ConfigurationInvalidError(f"Option {option} was duplicated.")
                     
+        if len(missing_fields) > 0:
+            raise ConfigurationInvalidError("Missing required fields:\n{}".format("\n".join(missing_fields)))
+                    
         for key in self.loaders:
             if key in self.RESERVED_LOADER_NAMES:
                 raise ConfigurationInvalidError(f"A defined loading function attempted to use reserved name \"{key}\"\nThe names {self.RESERVED_LOADER_NAMES} are reserved.")
+            
+        disk_data_names = self.disk_data.keys
+        for key in self.processed_data.keys:
+            if key in disk_data_names:
+                raise ConfigurationInvalidError(f"Processed data key \"{key}\" matches a loaded data key in the smae file. All data keys must be unique within the same file.")
 
     @staticmethod
     def create_new(filepath: str = "new_plot_automation.autoplot") -> None:
@@ -190,6 +208,9 @@ class Config(qc.IO.Configurations.JsonConfig):
 
 
     def initialise(self: "Config") -> "Autoploter":
+        """
+        Generate a new Autoploter object from this config.
+        """
 
         import_dependancies: Dict[str, LibraryDependency] = {}
         function_dependancies: Dict[str, CallableDependency] = {}
@@ -220,7 +241,7 @@ class Config(qc.IO.Configurations.JsonConfig):
 
             if not self.__namespace_is_dependency_only[cfg_uuid]:
                 for data_definition_key in cfg.disk_data.keys:
-                    if f"{cfg_uuid}:{data_definition_key}" not in import_dependancies:
+                    if f"{cfg_uuid}:{data_definition_key}" not in data_dependancies:
                         filepath = cfg.disk_data[data_definition_key].filepath
                         loader = cfg.disk_data[data_definition_key].loader
                         new_dependency = None
@@ -235,7 +256,7 @@ class Config(qc.IO.Configurations.JsonConfig):
                             new_dependency = DataDependency(data_definition_key, filepath, function_dependancies[loader])
                         elif loader == "HDF5":
                             new_dependency = HDF5_DataDependency(data_definition_key, filepath)
-                        import_dependancies[f"{cfg_uuid}:{data_definition_key}"] = new_dependency
+                        data_dependancies[f"{cfg_uuid}:{data_definition_key}"] = new_dependency
 
                 for plot_definition_key in cfg.disk_data.plots:
                     if f"{cfg_uuid}:{plot_definition_key}" not in plot_definitions:
@@ -246,9 +267,25 @@ class Config(qc.IO.Configurations.JsonConfig):
         for v in function_dependancies.values():
             v.load()
 
-        plotter = Autoploter(self, import_dependancies, function_dependancies, data_dependancies, plot_definitions)
+        plan = ExcecutionPlan(plot_definitions)
+
+        plotter = Autoploter(self, plan, import_dependancies, function_dependancies, data_dependancies, plot_definitions)
 
         return plotter
+    
+    @property
+    def namespace_ids(self: "Config") -> List[str]:
+        return list(self.__namespace_names.keys())
+    
+    @property
+    def namespaces(self: "Config") -> List[str]:
+        return list(self.__namespace_ids.keys())
+    
+    def get_namspace_id_by_name(self: "Config", name: str) -> str:
+        return self.__namespace_ids[name]
+    
+    def get_namspace_name_by_id(self: "Config", id: str) -> str:
+        return self.__namespace_names[id]
 
 
 
@@ -257,16 +294,22 @@ class Autoploter(object):
     """
 
     def __init__(self: "Autoploter",
-                 config: "Config" = None,
-                 imports: Dict[str, LibraryDependency] = {},
-                 functions: Dict[str, CallableDependency] = {},
-                 data: Dict[str, DataDependency_Base] = {},
-                 plots: Dict[str, PlotDefinition] = {}):
-        self.__imports = imports
-        self.__functions = functions
-        self.__data = data
-        self.__plots = plots
-        #TODO:
+                 config: "Config",
+                 execution_plan: ExcecutionPlan,
+                 imports: Dict[str, LibraryDependency] = None,
+                 functions: Dict[str, CallableDependency] = None,
+                 data: Dict[str, DataDependency_Base] = None,
+                 plots: Dict[str, PlotDefinition] = None):
+        self.__config = config
+
+        self.__imports = imports if imports is not None else {}
+        self.__functions = functions if functions is not None else {}
+        self.__data = data if data is not None else {}
+        self.__plots = plots if plots is not None else {}
+
+        self.__plan = execution_plan
+        
+        #TODO: ensure logs path exists (init logging object)
 
     def verify(self: "Autoploter") -> None:
         """
@@ -281,13 +324,49 @@ class Autoploter(object):
         for key in self.__plots:
             assert self.__plots[key].IsValid, f"Plot {key} wasn't valid."
 
+    def load_data(self: "Autoploter", names: Union[str, List[str]], namespaces: Union[str, List[str], None] = None, namespace_ids: Union[str, List[str], None] = None):
+        if isinstance(names, str):
+            names = [names]
+        if isinstance(namespaces, str):
+            namespaces = [namespaces]
+        if isinstance(namespace_ids, str):
+            namespace_ids = [namespace_ids]
+
+        if namespaces is not None and namespace_ids is not None:
+            raise ValueError("You cannot specify both namespaces and namespace_ids.")
+        
+        if namespace_ids is None and namespaces is not None:
+            namespace_ids = [self.__config.get_namspace_id_by_name(namespace) for namespace in namespaces]
+        
+        fullnames = None
+        if namespace_ids is not None:
+            fullnames = []
+            for id, name in zip(namespace_ids, names):
+                fullnames.append(f"{id}:{name}")
+        else:
+            fullnames = names
+            
+        for fullname in fullnames:
+            dependency = self.__data[fullname]
+            if not (dependency.IsLoaded and dependency.IsValid):
+                dependency.load()
+
+
     def run(self: "Autoploter"):
         """
         """
 
         try:
-           self.verify()
+            self.verify()
         except Exception as e:
             raise RuntimeError("Unable to run as the definition was not valid.") from e
-        
-        #TODO: run
+
+        processed_data_products = {}
+        #self.__plan.execute_all()
+        plans = self.__plan.as_chunks()
+        for plan_chunk in plans:
+            self.load_data(plan_chunk.data_required)
+            processed_data_products.update(plan_chunk.execute_all())
+            plan_chunk.mark_data_used()
+
+        #TODO: make plots here

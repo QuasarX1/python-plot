@@ -1,0 +1,2 @@
+class PlotDefinition(object):
+    pass

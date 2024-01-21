@@ -1,0 +1,2 @@
+class ExcecutionPlan(object):
+    pass

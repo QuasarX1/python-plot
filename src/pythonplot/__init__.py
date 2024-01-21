@@ -44,5 +44,3 @@ from .__about__ import __version__
 
 from . import Dependencies
 from .Dependencies import LibraryDependency, CallableDependency, DataDependency, HDF5_DataDependency
-
-from ._temp import load_config as pconfig#TODO: update this

@@ -39,6 +39,16 @@ Source = "https://github.com/QuasarX1/python-plot"
 
 [project.scripts]
 pplot = "pythonplot._scripts.pplot:main"
+pplot-help = "pythonplot._scripts.pplot_help:main"
+help-pplot = "pythonplot._scripts.pplot_help:main"
+pplot-config = "pythonplot._scripts.pplot_config:main"
+pplot-new = "pythonplot._scripts.pplot_new:main"
+pplot-copy = "pythonplot._scripts.pplot_copy:main"
+pplot-cp = "pythonplot._scripts.pplot_copy:main"
+pplot-namespaces = "pythonplot._scripts.pplot_list_namespaces:main"
+pplot-test = "pythonplot._scripts.pplot_test:main"
+pplot-run = "pythonplot._scripts.pplot_run:main"
+pplot-log = "pythonplot._scripts.pplot_find_log:main"
 
 
 

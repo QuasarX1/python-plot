@@ -1,2 +1,4 @@
+import pythonplot
+
 def main():
-    print("Hello world!")
+    print(pythonplot.__doc__)

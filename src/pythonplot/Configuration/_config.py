@@ -96,9 +96,10 @@ class Config(qc.IO.Configurations.JsonConfig):
                 raise ConfigurationInvalidError(f"Processed data key \"{key}\" matches a loaded data key in the smae file. All data keys must be unique within the same file.")
 
     @staticmethod
-    def create_new(filepath: str = "new_plot_automation.autoplot") -> None:
+    def create_new(filepath: str = "new_plot_automation.autoplot", namespace: Union[str, None] = None) -> str:
         uuid.uuid4()
-        pass#TODO:
+        pass#TODO: handle duplicate file (add numbering) - important for multiple new files!
+        #return filepath
 
     def load_namespaces(self: "Config") -> None:
         if not self.valid:

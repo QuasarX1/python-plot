@@ -159,7 +159,7 @@ class LibraryDependency(Dependency):
         self.__relitive_import_path = relitive_import_path
 
         if self.__filepath is not None and self.__filepath[-3:] != ".py":
-            package_name = self.__filepath.rstrip(os.path.sep).split(os.path.sep, maxsplit = 1)[-1]
+            package_name = self.__filepath.rstrip(os.sep).split(os.sep, maxsplit = 1)[-1]
             self.__filepath = os.path.join(self.__filepath, "__init__.py")
             if self.__relitive_import_path is not None:
                 self.__relitive_import_path = f"{package_name}.{self.__relitive_import_path}"

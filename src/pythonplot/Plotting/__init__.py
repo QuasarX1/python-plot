@@ -1,3 +1,10 @@
+"""
+"""
+
+__all__ = ["Autoploter", "ExcecutionPlan", "PlotDefinition"]
+
+
+
 import QuasarCode as qc
 from matplotlib import pyplot as plt
 from typing import Union, List, Tuple, Dict, Callable
@@ -6,13 +13,12 @@ import uuid
 import numpy as np
 import os
 
-from ..Dependencies import LibraryDependency, CallableDependency, DataDependency_Base, DataDependency, HDF5_DataDependency
-
 from ._planning import ExcecutionPlan
 from ._plot_definition import PlotDefinition
 
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
+    from ..Dependencies import LibraryDependency, CallableDependency, DataDependency_Base
     from ..Configuration import Config
 
 
@@ -24,10 +30,10 @@ class Autoploter(object):
     def __init__(self: "Autoploter",
                  config: "Config",
                  execution_plan: ExcecutionPlan,
-                 imports: Dict[str, LibraryDependency] = None,
-                 functions: Dict[str, CallableDependency] = None,
-                 data: Dict[str, DataDependency_Base] = None,
-                 plots: Dict[str, PlotDefinition] = None):
+                 imports: Dict[str, "LibraryDependency"] = None,
+                 functions: Dict[str, "CallableDependency"] = None,
+                 data: Dict[str, "DataDependency_Base"] = None,
+                 plots: Dict[str, "PlotDefinition"] = None):
         self.__config = config
 
         self.__imports = imports if imports is not None else {}

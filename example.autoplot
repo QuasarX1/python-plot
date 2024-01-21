@@ -7,6 +7,7 @@
     "pplot_version": "0.0.1",
 
     "logs_path": "./logs",
+    "output_root": "./plots",
 
     "required_externals": [
         "~/imports.autoplot"

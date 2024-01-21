@@ -37,6 +37,9 @@ Documentation = "https://github.com/QuasarX1/python-plot#readme"
 Issues = "https://github.com/QuasarX1/python-plot/issues"
 Source = "https://github.com/QuasarX1/python-plot"
 
+[project.scripts]
+pplot = "pythonplot._scripts.pplot:main"
+
 
 
 [tool.coverage.run]

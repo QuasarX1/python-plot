@@ -40,7 +40,14 @@ This Python package defines the following commands:
         Returns the filepath of a log (default latest) for an automation. View with your prefered tool.
 """
 
-from .__about__ import __version__
+try:
 
-from . import Dependencies
-from .Dependencies import LibraryDependency, CallableDependency, DataDependency, HDF5_DataDependency
+    from .__about__ import __version__
+
+    from . import Dependencies, Plotting, Configuration
+    from .Dependencies import LibraryDependency, CallableDependency, DataDependency, HDF5_DataDependency
+    from .Configuration import load_config, Config
+    from .Plotting import PlotDefinition, ExcecutionPlan, Autoploter
+
+except Exception as e:
+    raise RuntimeError("\n\nUnable to load pythonplot package. Ensure all dependancies are installed in the current environment. If the issue persists, please raise an issue on the project GitHub (see the PyPI listing for a link). Make sure to include your current version of the software and Python as well as the above error traceback.") from e

@@ -1,0 +1,33 @@
+{
+    "namespace": "dependancy",
+    "uuid": "48738452-b6d6-4c8e-a63e-2082bcde32d6",
+
+    "file_version": 1,
+
+    "pplot_version": "0.0.2",
+
+    "logs_path": "./logs",
+    "output_root": null,
+
+    "required_externals": [ ],
+
+    "imports": {
+        "example_target_source_file": {
+            "location": "./example_target_source_file.py"
+        }
+    },
+
+    "functions": {
+        "hello_world": "example_target_source_file.hello_world"
+    },
+
+    "disk_data": { },
+
+    "processed_data": { },
+
+    "plots": { },
+
+    "target_externals": [
+        "./test_other_branch_plot.autoplot"
+    ]
+}

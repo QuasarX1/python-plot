@@ -1,0 +1,29 @@
+{
+    "namespace": "group",
+    "uuid": "9edd258b-7909-47d3-988d-ef5ea4a60b36",
+
+    "file_version": 1,
+
+    "pplot_version": "0.0.2",
+
+    "logs_path": "./logs",
+    "output_root": null,
+
+    "required_externals": [ ],
+
+    "imports": { },
+
+    "functions": { },
+
+    "disk_data": { },
+
+    "processed_data": { },
+
+    "plots": { },
+
+    "target_externals": [
+        "./test_plot_1.autoplot",
+        "./test_plot_2.autoplot",
+        "./test_plot_3.autoplot"
+    ]
+}

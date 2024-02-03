@@ -20,14 +20,20 @@ class ConfigurationInvalidError(SyntaxError):
     def __init__(self, message: str):
         super().__init__(f"Configuration was improperly formatted. {message}")
 
-class Config(qc.IO.Configurations.JsonConfig):
+#class Config(qc.IO.Configurations.JsonConfig):
+class Config(object):
     """
     Configuration type containing the settings nessessary to generate plots.
     """
 
-    def __init__(self: "Config", *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.__filepath: Union[str, None] = None
+    #def __init__(self: "Config", *args, **kwargs):
+    #    super().__init__(*args, **kwargs)
+
+    def __init__(self: "Config", target: qc.IO.Configurations.JsonConfig, filepath: str = ".", is_root: bool = True):
+        self.__raw_config = target
+        self.__is_root = is_root
+
+        self.__filepath: str = filepath
         self.__namespace_ids: Dict[str, str] = {}
         self.__namespace_names: Dict[str, str] = {}
         self.__namespace_file_targets: Dict[str, str] = {}
@@ -36,7 +42,8 @@ class Config(qc.IO.Configurations.JsonConfig):
 
         self.__declared_optionals = { key: False for key in FIELDS if key == Requirement.OPTIONAL }
         self.__valid: bool = self.validate()
-        self.load_namespaces()
+        if is_root:
+            self.load_namespaces()
 
     @property
     def filepath(self: "Config") -> str:
@@ -53,10 +60,22 @@ class Config(qc.IO.Configurations.JsonConfig):
         """
         return self.__valid
 
+    @property
+    def raw_config(self: "Config") -> qc.IO.Configurations.JsonConfig:
+        """
+        """
+        return self.__raw_config
+
+    #@classmethod
+    #def from_file(cls, filepath: str) -> "Config":
+    #    new_config = super().from_file(filepath)
+    #    new_config.__filepath = filepath
+    #    return new_config
+
     @classmethod
-    def from_file(cls, filepath: str) -> "Config":
-        new_config = super().from_file(filepath)
-        new_config.__filepath = filepath
+    def from_file(cls, filepath: str, is_root: bool = True) -> "Config":
+        filepath = filepath if os.path.isabs(filepath) else os.path.abspath(filepath)
+        new_config = Config(qc.IO.Configurations.JsonConfig.from_file(filepath), filepath, is_root)
         return new_config
 
     RESERVED_LOADER_NAMES: Tuple[str] = ("HDF5", )
@@ -66,80 +85,103 @@ class Config(qc.IO.Configurations.JsonConfig):
         Test the contence of the configuration to ensure it is valid.
         """
 
-        if self.pplot_version != __version__:
-            pass#TODO: display & log a warning about compatibility
+        try:
 
-        missing_fields = [field for field in FIELDS if FIELDS[field] == Requirement.REQUIRED]
+            if self.__raw_config.pplot_version.strip("v") != __version__.strip("v"):
+                qc.Console.print_warning(f"Configuration file with namespace {self.__raw_config.namespace} specifies pythonplot version {self.__raw_config.pplot_version} but current version is {__version__}. This file may not be compatible.")
 
-        for option in self.keys:
-            if option in FIELDS:
-                if FIELDS[option] == Requirement.REQUIRED:
-                    try:
-                        missing_fields.remove(option)
-                    except ValueError:
-                        raise ConfigurationInvalidError(f"Option {option} was duplicated.")
-                elif FIELDS[option] == Requirement.OPTIONAL:
-                    self.__declared_optionals[option] = True
-                else:
-                    raise ConfigurationInvalidError(f"Option {option} is not a valid option. Check the spelling and list of valid options for this version ({__version__}).")
-                    
-        if len(missing_fields) > 0:
-            raise ConfigurationInvalidError("Missing required fields:\n{}".format("\n".join(missing_fields)))
-                    
-        for key in self.loaders:
-            if key in self.RESERVED_LOADER_NAMES:
-                raise ConfigurationInvalidError(f"A defined loading function attempted to use reserved name \"{key}\"\nThe names {self.RESERVED_LOADER_NAMES} are reserved.")
-            
-        disk_data_names = self.disk_data.keys
-        for key in self.processed_data.keys:
-            if key in disk_data_names:
-                raise ConfigurationInvalidError(f"Processed data key \"{key}\" matches a loaded data key in the smae file. All data keys must be unique within the same file.")
+            missing_fields = [field for field in FIELDS if FIELDS[field] == Requirement.REQUIRED]
+
+            for option in self.__raw_config.keys:
+                if option in FIELDS:
+                    if FIELDS[option] == Requirement.REQUIRED:
+                        try:
+                            missing_fields.remove(option)
+                        except ValueError:
+                            raise ConfigurationInvalidError(f"Option {option} was duplicated.")
+                    elif FIELDS[option] == Requirement.OPTIONAL:
+                        self.__declared_optionals[option] = True
+                    else:
+                        raise ConfigurationInvalidError(f"Option {option} is not a valid option. Check the spelling and list of valid options for this version ({__version__}).")
+                        
+            if len(missing_fields) > 0:
+                raise ConfigurationInvalidError("Missing required fields:\n{}".format("\n".join(missing_fields)))
+                        
+    #        for key in self.__raw_config.loaders:
+    #            if key in self.RESERVED_LOADER_NAMES:
+    #                raise ConfigurationInvalidError(f"A defined loading function attempted to use reserved name \"{key}\"\nThe names {self.RESERVED_LOADER_NAMES} are reserved.")
+                
+            disk_data_names = self.__raw_config.disk_data.keys
+            for key in self.__raw_config.processed_data.keys:
+                if key in disk_data_names:
+                    raise ConfigurationInvalidError(f"Processed data key \"{key}\" matches a loaded data key in the smae file. All data keys must be unique within the same file.")
+                
+            return True
+        
+        except Exception as e:
+            #TODO: log vaild validation and reason.
+            return False
 
     @staticmethod
     def create_new(filepath: str = "new_plot_automation.autoplot", namespace: Union[str, None] = None) -> str:
         uuid.uuid4()
         pass#TODO: handle duplicate file (add numbering) - important for multiple new files!
         #return filepath
+    
+    def _evaluate_filepath(self: "Config", filepath: str) -> str:
+        if os.path.isabs(filepath):
+            return filepath
+        else:
+            return os.path.abspath(os.path.join(os.path.dirname(self.__filepath), filepath))
 
     def load_namespaces(self: "Config") -> None:
         if not self.valid:
             #TODO: log invalid target file
             return
 
-        self.__namespace_ids[self.namespace] = self.uuid
-        self.__namespace_names[self.uuid] = self.namespace
-        self.__namespace_file_targets[self.uuid] = self.filepath
-        self.__namespace_configs[self.uuid] = self
+        self.__namespace_ids[self.__raw_config.namespace] = self.__raw_config.uuid
+        self.__namespace_names[self.__raw_config.uuid] = self.__raw_config.namespace
+        self.__namespace_file_targets[self.__raw_config.uuid] = self.filepath
+        self.__namespace_configs[self.__raw_config.uuid] = self
 
-        files_to_load: List[str] = self.required_externals + self.target_externals
+        files_to_load: List[str] = [self._evaluate_filepath(v) for v in self.__raw_config.required_externals] + [self._evaluate_filepath(v) for v in self.__raw_config.target_externals]
 
         while len(files_to_load) > 0:
             test_filepath = files_to_load.pop(0)
 
             try:
-                loaded_config = Config.from_file(test_filepath)
+                loaded_config = Config.from_file(test_filepath, is_root = False)
             except:
+                qc.Console.print_error(f"Unable to find file at {test_filepath}")
                 #TODO: log file missing
                 continue
 
             if loaded_config.valid:
-                test_uuid = loaded_config.uuid
-                test_namespace = loaded_config.namespace
+                test_uuid = loaded_config.raw_config.uuid
+                test_namespace = loaded_config.raw_config.namespace
 
                 if test_uuid in self.__namespace_names:
                     if test_filepath != self.__namespace_file_targets[test_uuid]:
+                        qc.Console.print_error(f"UUID CONFLICT: {test_namespace} ({test_uuid})")
                         pass#TODO: handle UUID conflict
+                    else:
+                        qc.Console.print_debug(f"Skipping already loaded config: {test_namespace} ({test_uuid})")
 
                 elif test_namespace in self.__namespace_ids:
+                    qc.Console.print_error(f"NAMESPACE CONFLICT: {test_namespace} ({test_uuid} and {self.__namespace_ids[test_namespace]})")
                     pass#TODO: handle namespace conflicts
 
                 else:
-                    self.__namespace_ids[loaded_config.namespace] = loaded_config.uuid
-                    self.__namespace_names[loaded_config.uuid] = loaded_config.namespace
-                    self.__namespace_file_targets[loaded_config.uuid] = loaded_config.filepath
-                    self.__namespace_configs[loaded_config.uuid] = test_filepath
+                    self.__namespace_ids[loaded_config.raw_config.namespace] = loaded_config.raw_config.uuid
+                    self.__namespace_names[loaded_config.raw_config.uuid] = loaded_config.raw_config.namespace
+                    self.__namespace_file_targets[loaded_config.raw_config.uuid] = loaded_config.filepath
+                    self.__namespace_configs[loaded_config.raw_config.uuid] = test_filepath
+
+                    #TODO: fix inclusion of "target_externals" for files selected as "required_externals" (how to deal with circular inclusion??? re-check! use flag for full inclusion to prevent loop!)
+                    files_to_load.extend([loaded_config._evaluate_filepath(v) for v in loaded_config.raw_config.required_externals] + [loaded_config._evaluate_filepath(v) for v in loaded_config.raw_config.target_externals])
 
             else:
+                qc.Console.print_warning(f"Unable to read config file at {test_filepath}")
                 pass#TODO: log unable to read file
 
     def create_namespace_report(self: "Config", ids = False, filepaths = False) -> str:

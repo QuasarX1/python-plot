@@ -1,0 +1,59 @@
+{
+    "namespace": "plot1",
+    "uuid": "9c9cccc6-cd6f-4e20-9435-f546376f563e",
+
+    "file_version": 1,
+
+    "pplot_version": "0.0.2",
+
+    "logs_path": "./logs",
+    "output_root": "./plots",
+
+    "required_externals": [
+        "./test_dependancy.autoplot"
+    ],
+
+    "imports": {
+        "example_target_source_file": {
+            "location": "./example_target_source_file.py"
+        }
+    },
+
+    "functions": {
+        "f0": "QuasarCode.Console.print_info",
+        "f1": "example_target_source_file.read_n_elements",
+        "f2": "example_target_source_file.generate_random_data"
+    },
+
+    "disk_data": {
+        "d0": {
+            "filepath": "./data.hdf5",
+            "loader": "HDF5"
+        }
+    },
+
+    "processed_data": {
+        "n_values": {
+            "function": "f1",
+            "inputs": [ "d0" ]
+        },
+        "v0": {
+            "function": "f2",
+            "inputs": [ "n_values" ]
+        },
+        "v1": {
+            "function": "f0",
+            "inputs": [ "v0" ]
+        },
+        "v2": {
+            "function": "dependancy.hello_world",
+            "inputs": [ ]
+        }
+    },
+
+    "plots": {
+        "p0": {}
+    },
+
+    "target_externals": [ ]
+}
